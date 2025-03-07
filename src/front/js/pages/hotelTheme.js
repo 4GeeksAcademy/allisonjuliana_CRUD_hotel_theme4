@@ -3,222 +3,265 @@ import { useNavigate } from 'react-router-dom';
 import "../../styles/hotelTheme.css";
 import 'font-awesome/css/font-awesome.min.css';
 
-const HotelThemeForm = () => {
-    const [nombre, setNombre] = useState('');
-    const [message, setMessage] = useState('');
-    const [hotelThemesList, setHotelThemesList] = useState([]);  // Cambié 'themesList' por 'hotelThemesList'
-    const [editMode, setEditMode] = useState(false);
-    const [selectedHotelThemeId, setSelectedHotelThemeId] = useState(null);  // Cambié 'selectedThemeId' por 'selectedHotelThemeId'
+const HotelTheme = () => {
+  const [hotels, setHotels] = useState([]);
+  const [themes, setThemes] = useState([]);
+  const [hotelId, setHotelId] = useState('');
+  const [themeId, setThemeId] = useState('');
+  const [hotelThemes, setHotelThemes] = useState([]);
+  const [editingId, setEditingId] = useState(null);
 
-    const navigate = useNavigate();
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL;
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL;
 
-    useEffect(() => {
-        fetchHotelThemes();
-    }, []);
+  const loadHotels = async () => {
+    try {
+      const response = await fetch(`${backendUrl}api/hotel`);
+      if (response.ok) {
+        const data = await response.json();
+        setHotels(data);
+      } else {
+        console.error("Error fetching hotels:", response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching hotels:', error);
+    }
+  };
 
-    const fetchHotelThemes = async () => {
-        try {
-            const response = await fetch(`${backendUrl}api/hoteltheme`);
-            const data = await response.json();
-            
-            if (response.ok) {
-                // Aquí, 'data' es una lista de asociaciones hotel-tema
-                // Por ejemplo: [{ id: 1, id_hotel: 1, id_theme: 2 }, { id: 2, id_hotel: 1, id_theme: 3 }]
-                // Ahora, necesitamos obtener los temas para cada 'id_theme'
-    
-                const themeIds = data.map(item => item.id_theme);
-                
-                // Hacer una nueva solicitud para obtener los temas basados en 'id_theme'
-                const themesResponse = await fetch(`${backendUrl}api/theme?ids=${themeIds.join(',')}`); // Ajusta según tu API
-                const themesData = await themesResponse.json();
-    
-                if (themesResponse.ok) {
-                    setHotelThemesList(themesData.themes); // Aquí suponemos que la respuesta contiene 'themes'
-                } else {
-                    setMessage('Failed to load hotel themes.');
-                }
-            } else {
-                setMessage('Failed to load hotel themes.');
-            }
-        } catch (error) {
-            setMessage('Error fetching hotel themes.');
-            console.error('Error fetching hotel themes:', error);
-        }
-    };
+  const loadThemes = async () => {
+    try {
+      const response = await fetch(`${backendUrl}api/theme`);
+      if (response.ok) {
+        const data = await response.json();
+        setThemes(data);
+      } else {
+        console.error("Error fetching themes:", response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching themes:', error);
+    }
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+  const loadHotelThemes = async () => {
+    try {
+      const response = await fetch(`${backendUrl}api/hoteltheme`);
+      if (response.ok) {
+        const data = await response.json();
+        setHotelThemes(data);
+      } else {
+        console.error("Error fetching hotelthemes:", response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching hotelthemes:', error);
+    }
+  };
 
-        if (!nombre) {
-            setMessage('Hotel theme name is required!');
-            return;
-        }
+  const createHotelTheme = async () => {
+    if (!hotelId || !themeId) {
+      alert('Please select both a hotel and a theme');
+      return;
+    }
 
-        const url = editMode
-            ? `${backendUrl}/api/hoteltheme/${selectedHotelThemeId}`  // Cambié 'theme' por 'hoteltheme'
-            : `${backendUrl}/api/hoteltheme`;  // Cambié 'theme' por 'hoteltheme'
+    try {
+      const response = await fetch(`${backendUrl}api/hoteltheme`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_hotel: hotelId,
+          id_theme: themeId,
+        }),
+      });
 
-        const method = editMode ? 'PUT' : 'POST';
-        const body = JSON.stringify({
-            nombre,
-        });
+      if (response.ok) {
+        const data = await response.json();
+        setHotelThemes([...hotelThemes, data]);
+        resetForm();
+      } else {
+        const errorData = await response.json();
+        console.error("Error creating relationship:", errorData.message);
+      }
+    } catch (error) {
+      console.error('Error creating hotel-theme relationship:', error);
+    }
+  };
 
-        try {
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: body,
-            });
+  const updateHotelTheme = async () => {
+    if (!hotelId || !themeId || !editingId) {
+      alert('Please select both a hotel and a theme to edit');
+      return;
+    }
 
-            const data = await response.json();
+    try {
+      const response = await fetch(`${backendUrl}api/hoteltheme/${editingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_hotel: hotelId,
+          id_theme: themeId,
+        }),
+      });
 
-            if (response.ok) {
-                setNombre('');
-                setEditMode(false);
-                setSelectedHotelThemeId(null);  // Cambié 'selectedThemeId' por 'selectedHotelThemeId'
-                fetchHotelThemes();
-                setMessage('Hotel theme updated successfully.');  // Cambié 'Theme' por 'Hotel theme'
-            } else {
-                setMessage('Error creating or updating hotel theme.');  // Cambié 'Theme' por 'Hotel theme'
-            }
-        } catch (error) {
-            setMessage('Error creating or updating hotel theme.');  // Cambié 'Theme' por 'Hotel theme'
-            console.error('Error making request:', error);
-        }
-    };
+      if (response.ok) {
+        const data = await response.json();
+        setHotelThemes(
+          hotelThemes.map(item =>
+            item.id === editingId ? data : item
+          )
+        );
+        resetForm();
+      } else {
+        const errorData = await response.json();
+        console.error("Error editing relationship:", errorData.message);
+      }
+    } catch (error) {
+      console.error('Error editing hotel-theme relationship:', error);
+    }
+  };
 
-    const handleDelete = async (hotelThemeId) => {  // Cambié 'themeId' por 'hotelThemeId'
-        const isConfirmed = window.confirm('Are you sure you want to delete this hotel theme?');  // Cambié 'theme' por 'hotel theme'
+  const deleteHotelTheme = async (id) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this relationship?");
+  
+    if (!isConfirmed) {
+      return;
+    }
 
-        if (!isConfirmed) {
-            return;
-        }
+    try {
+      const response = await fetch(`${backendUrl}api/hoteltheme/${id}`, {
+        method: 'DELETE',
+      });
 
-        const url = `${backendUrl}/api/hoteltheme/${hotelThemeId}`;  // Cambié 'theme' por 'hoteltheme'
-        try {
-            const response = await fetch(url, { method: 'DELETE' });
-            const data = await response.json();
+      if (response.ok) {
+        setHotelThemes(hotelThemes.filter(item => item.id !== id));
+      } else {
+        const errorData = await response.json();
+        console.error("Error deleting relationship:", errorData.message);
+      }
+    } catch (error) {
+      console.error('Error deleting hotel-theme relationship:', error);
+    }
+  };
 
-            if (response.ok) {
-                setHotelThemesList((prevHotelThemesList) => {  // Cambié 'themesList' por 'hotelThemesList'
-                    const newHotelThemesList = prevHotelThemesList.filter(hotelTheme => hotelTheme.id !== hotelThemeId);  // Cambié 'theme' por 'hotelTheme'
-                    if (newHotelThemesList.length === 0) {
-                        setMessage("No hotel themes available.");  // Cambié 'themes' por 'hotel themes'
-                    }
-                    return newHotelThemesList;
-                });
-                setMessage('Hotel theme deleted successfully.');  // Cambié 'Theme' por 'Hotel theme'
-            } else {
-                setMessage('Failed to delete hotel theme.');  // Cambié 'Theme' por 'Hotel theme'
-            }
-        } catch (error) {
-            setMessage('Error deleting hotel theme.');  // Cambié 'Theme' por 'Hotel theme'
-            console.error('Error deleting hotel theme:', error);  // Cambié 'Theme' por 'Hotel theme'
-        }
-    };
+  const resetForm = () => {
+    setHotelId('');
+    setThemeId('');
+    setEditingId(null);
+  };
 
-    const handleEdit = (hotelThemeId) => {  // Cambié 'themeId' por 'hotelThemeId'
-        const hotelThemeToEdit = hotelThemesList.find((hotelTheme) => hotelTheme.id === hotelThemeId);  // Cambié 'theme' por 'hotelTheme'
-        if (hotelThemeToEdit) {
-            setNombre(hotelThemeToEdit.nombre);
-            setSelectedHotelThemeId(hotelThemeId);  // Cambié 'selectedThemeId' por 'selectedHotelThemeId'
-            setEditMode(true);
-        }
-    };
+  const editHotelTheme = (id) => {
+    const hotelThemeToEdit = hotelThemes.find((ht) => ht.id === id);
+    if (hotelThemeToEdit) {
+      setHotelId(hotelThemeToEdit.id_hotel);
+      setThemeId(hotelThemeToEdit.id_theme);
+      setEditingId(id);
+    }
+  };
 
-    const handleCancel = () => {
-        setNombre('');
-        setEditMode(false);
-        setSelectedHotelThemeId(null);  // Cambié 'selectedThemeId' por 'selectedHotelThemeId'
-    };
+  const cancelEdit = () => {
+    resetForm();
+  };
 
-    const goToHome = () => {
-        navigate('/');
-    };
+  useEffect(() => {
+    loadHotels();
+    loadThemes();
+    loadHotelThemes();
+  }, []);
 
-    return (
-        <div className="container mt-5 mb-5 container-dark">
-            <h2 className="text-center mb-4">{editMode ? 'Edit Hotel Theme' : 'Create Hotel Theme'}</h2>
-            <div className="row justify-content-center">
-                <div className="col-md-7">
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                            <label htmlFor="hotelTheme" className="form-label custom-label">Hotel Theme:</label>
-                            <input
-                                type="text"
-                                id="hotelTheme"  // Cambié 'theme' por 'hotelTheme'
-                                className="form-control custom-input"
-                                value={nombre}
-                                onChange={(e) => setNombre(e.target.value)}
-                                required
-                                style={{ fontSize: '24px' }}
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            className="btn btn-success w-100"
-                        >
-                            {editMode ? 'Save Changes' : 'Create Hotel Theme'}
-                        </button>
-                        {editMode && (
-                            <button
-                                type="button"
-                                className="btn btn-danger w-100 mt-2"
-                                onClick={handleCancel}
-                            >
-                                Cancel changes
-                            </button>
-                        )}
-                    </form>
-                </div>
+  return (
+    <div className="container">
+      <h1>Hotel and Theme Management</h1>
+
+      <div className="card">
+        <div className="card-body">
+          <h5 className="card-title">{editingId ? 'Edit' : 'Create'} Hotel-Theme Relationship</h5>
+
+          <form>
+            <div className="form-group">
+              <label htmlFor="hotelSelect">Hotel</label>
+              <select
+                className="form-control"
+                id="hotelSelect"
+                value={hotelId}
+                onChange={(e) => setHotelId(e.target.value)}
+              >
+                <option value="">Select a hotel</option>
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {message && <p className="mt-3 text-center text-dark">{message}</p>}
+            <div className="form-group">
+              <label htmlFor="themeSelect">Theme</label>
+              <select
+                className="form-control"
+                id="themeSelect"
+                value={themeId}
+                onChange={(e) => setThemeId(e.target.value)}
+              >
+                <option value="">Select a theme</option>
+                {themes.map((theme) => (
+                  <option key={theme.id} value={theme.id}>
+                    {theme.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <h3 className="text-center mt-5">Hotel Themes List</h3>
-            <div className="mt-4 col-md-7 mx-auto row">
-                <ul className="list-group">
-                    {hotelThemesList.length > 0 ? (  // Cambié 'themesList' por 'hotelThemesList'
-                        hotelThemesList.map((hotelTheme) => (  // Cambié 'theme' por 'hotelTheme'
-                            <li key={hotelTheme.id} className="list-group-item d-flex justify-content-between align-items-center  mb-2">
-                                <span className="theme-text">{hotelTheme.nombre}</span>
-                                <div className="col-2 d-flex justify-content-between">
-                                    <i
-                                        className="fa fa-pencil"
-                                        style={{
-                                            fontSize: '20px',
-                                            cursor: 'pointer',
-                                        }}
-                                        onClick={() => handleEdit(hotelTheme.id)}  // Cambié 'theme' por 'hotelTheme'
-                                    ></i>
-                                    <i
-                                        className="fa fa-trash"
-                                        style={{
-                                            fontSize: '20px',
-                                            cursor: 'pointer'
-                                        }}
-                                        onClick={() => handleDelete(hotelTheme.id)}  // Cambié 'theme' por 'hotelTheme'
-                                    ></i>
-                                </div>
-                            </li>
-                        ))
-                    ) : (
-                        <p className="mt-3 text-center text-dark">No hotel themes available.</p>  // Cambié 'themes' por 'hotel themes'
-                    )}
-                </ul>
+            <div className="form-group">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={editingId ? updateHotelTheme : createHotelTheme}
+              >
+                {editingId ? 'Update' : 'Create'} Relationship
+              </button>
+              
+              {editingId && (
                 <button
-                    type="button"
-                    className="btn btn-primary w-100 mt-2"
-                    onClick={goToHome}
+                  type="button"
+                  className="btn btn-danger ml-2"
+                  onClick={cancelEdit}
                 >
-                    Go to Home
+                  Cancel
                 </button>
+              )}
             </div>
+          </form>
         </div>
-    );
+      </div>
+
+      <h3 className="mt-4">Current Hotel-Theme Relationships</h3>
+      <div className="list-group mt-4">
+        {hotelThemes.map((hotelTheme) => (
+          <div className="list-group-item d-flex justify-content-between align-items-center" key={hotelTheme.id}>
+            <div>
+              <strong>Hotel:</strong> {hotels.find(h => h.id === hotelTheme.id_hotel)?.name} 
+              - <strong>Theme:</strong> {themes.find(t => t.id === hotelTheme.id_theme)?.name}
+            </div>
+            <div>
+              <button
+                className="btn btn-warning btn-sm"
+                onClick={() => editHotelTheme(hotelTheme.id)}
+              >
+                Edit
+              </button>
+              <button
+                className="btn btn-danger btn-sm ml-2"
+                onClick={() => deleteHotelTheme(hotelTheme.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
-export default HotelThemeForm;  // Cambié 'ThemeForm' por 'HotelThemeForm'
+export default HotelTheme;
