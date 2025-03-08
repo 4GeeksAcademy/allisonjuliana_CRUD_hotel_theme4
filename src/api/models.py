@@ -19,24 +19,24 @@ class User(db.Model):
             # do not serialize the password, its a security breach
         }
 
-class Hotel(db.Model):
-    __tablename__ = 'hotel'
+class Hoteles(db.Model):
+    __tablename__ = 'hoteles'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), unique=True, nullable=False)
+    nombre = db.Column(db.String(120), unique=True, nullable=False)
 
     def __repr__(self):
-        return f'<Hotel {self.id}>'
+        return f'<Hotel {self.nombre}>'
 
     def serialize(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "nombre": self.nombre,
         }
     
 class Theme(db.Model):
     __tablename__ = 'theme'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), unique=True, nullable=False)
+    nombre = db.Column(db.String(120), unique=True, nullable=False)
 
     def __repr__(self):
         return f'<Theme {self.id}>'
@@ -44,16 +44,16 @@ class Theme(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "nombre": self.nombre,
         }
     
 class HotelTheme(db.Model):
     __tablename__ = 'hoteltheme'
     id = db.Column(db.Integer, primary_key=True)
-    id_hotel = db.Column(db.Integer, db.ForeignKey('hotel.id'), nullable=True)
+    id_hoteles = db.Column(db.Integer, db.ForeignKey('hoteles.id'), nullable=True)
     id_theme = db.Column(db.Integer, db.ForeignKey('theme.id'), nullable=True)
 
-    hotel = db.relationship('Hotel', backref='hoteltheme')
+    hoteles = db.relationship('Hoteles', backref='hoteltheme')
     theme = db.relationship('Theme', backref='hoteltheme')
 
     def __repr__(self):
@@ -62,6 +62,6 @@ class HotelTheme(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "id_hotel": self.id_hotel,
+            "id_hoteles": self.id_hoteles,
             "id_theme": self.id_theme
         }
